@@ -1,0 +1,151 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* GearUp Design System - Modern Dark Theme with Red Accents */
+
+@layer base {
+  :root {
+    /* Dark Theme Colors */
+    --background: 0 0% 0%; /* Pure black */
+    --foreground: 0 0% 98%; /* Near white */
+
+    --card: 0 0% 4%; /* Dark gray cards */
+    --card-foreground: 0 0% 95%;
+
+    --popover: 0 0% 6%;
+    --popover-foreground: 0 0% 95%;
+
+    /* Red accent system */
+    --primary: 0 65% 69%; /* #ff5e5e */
+    --primary-foreground: 0 0% 0%;
+    --primary-glow: 0 65% 80%; /* Lighter red for glows */
+
+    --secondary: 0 0% 8%; /* Dark surface */
+    --secondary-foreground: 0 0% 90%;
+
+    --muted: 0 0% 12%; /* Muted surfaces */
+    --muted-foreground: 0 0% 60%;
+
+    --accent: 0 65% 69%; /* Red accent */
+    --accent-foreground: 0 0% 0%;
+
+    --destructive: 0 65% 50%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 0 0% 15%; /* Dark borders */
+    --input: 0 0% 8%; /* Dark inputs */
+    --ring: 0 65% 69%; /* Red focus rings */
+
+    --radius: 0.75rem; /* More rounded for modern look */
+
+    /* Custom design tokens */
+    --surface: 0 0% 6%; /* Surface elements */
+    --surface-secondary: 0 0% 10%;
+    --text-primary: 0 0% 98%;
+    --text-secondary: 0 0% 70%;
+    --text-muted: 0 0% 50%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(0 65% 69%), hsl(0 65% 80%));
+    --gradient-dark: linear-gradient(135deg, hsl(0 0% 0%), hsl(0 0% 6%));
+    --gradient-surface: linear-gradient(135deg, hsl(0 0% 4%), hsl(0 0% 8%));
+
+    /* Shadows and glows */
+    --shadow-glow: 0 0 30px hsl(0 65% 69% / 0.3);
+    --shadow-red: 0 10px 40px hsl(0 65% 69% / 0.2);
+    --shadow-dark: 0 10px 30px hsl(0 0% 0% / 0.8);
+
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-inter antialiased;
+    background: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--surface));
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary));
+    border-radius: 3px;
+  }
+}
+
+@layer utilities {
+  /* Text utilities */
+  .text-gradient {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Glow effects */
+  .glow {
+    box-shadow: var(--shadow-glow);
+  }
+
+  .glow-red {
+    box-shadow: var(--shadow-red);
+  }
+
+  /* Hover animations */
+  .hover-glow {
+    transition: var(--transition-smooth);
+  }
+
+  .hover-glow:hover {
+    box-shadow: var(--shadow-glow);
+    transform: translateY(-2px);
+  }
+
+  .hover-lift {
+    transition: var(--transition-smooth);
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-4px);
+  }
+
+  /* Background patterns */
+  .bg-grid {
+    background-image: 
+      linear-gradient(rgba(255, 94, 94, 0.1) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 94, 94, 0.1) 1px, transparent 1px);
+    background-size: 50px 50px;
+  }
+
+  .bg-dots {
+    background-image: radial-gradient(rgba(255, 94, 94, 0.2) 1px, transparent 1px);
+    background-size: 30px 30px;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
