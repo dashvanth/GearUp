@@ -1,11 +1,32 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap");
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* GearUp Design System - Modern Dark Theme with Red Accents */
+/* Add these new styles to the end of your src/index.css file */
 
+.bg-category-camera {
+  background-image: url("@/assets/category-camera.jpg");
+}
+
+.bg-category-lighting {
+  background-image: url("@/assets/category-listings.jpg");
+}
+
+.bg-category-audio {
+  background-image: url("@/assets/category-audio.jpg");
+}
+
+.hover-lift {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 10px 20px rgba(255, 94, 94, 0.1);
+}
 @layer base {
   :root {
     /* Dark Theme Colors */
@@ -128,14 +149,19 @@
 
   /* Background patterns */
   .bg-grid {
-    background-image: 
-      linear-gradient(rgba(255, 94, 94, 0.1) 1px, transparent 1px),
+    background-image: linear-gradient(
+        rgba(255, 94, 94, 0.1) 1px,
+        transparent 1px
+      ),
       linear-gradient(90deg, rgba(255, 94, 94, 0.1) 1px, transparent 1px);
     background-size: 50px 50px;
   }
 
   .bg-dots {
-    background-image: radial-gradient(rgba(255, 94, 94, 0.2) 1px, transparent 1px);
+    background-image: radial-gradient(
+      rgba(255, 94, 94, 0.2) 1px,
+      transparent 1px
+    );
     background-size: 30px 30px;
   }
 }
