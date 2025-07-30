@@ -5,15 +5,16 @@ import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getAnalytics } from "firebase/analytics";
 
-// Your web app's Firebase configuration
+// This configuration now safely reads your keys from Vercel's system
+// when you deploy. For local development, it will read them from a .env.local file.
 const firebaseConfig = {
-  apiKey: "AIzaSyCEqxIlVwEPdO6W8oMJT6xMMzhyTTtiG3Q",
-  authDomain: "gearup-rentals-66f77.firebaseapp.com",
-  projectId: "gearup-rentals-66f77",
-  storageBucket: "gearup-rentals-66f77.appspot.com", // I corrected this for you from .firebasestorage.app
-  messagingSenderId: "41416783757",
-  appId: "1:41416783757:web:c79d1a4cee74db5c616fc4",
-  measurementId: "G-DT9VMQ6TFE",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
 // Initialize Firebase
@@ -21,6 +22,6 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
-const analytics = getAnalytics(app); // This line is now correctly placed after 'app' is created
+const analytics = getAnalytics(app);
 
 export { app, auth, db, storage };
