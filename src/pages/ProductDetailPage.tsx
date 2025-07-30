@@ -1,247 +1,238 @@
-// src/pages/AddEquipmentPage.tsx
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import { db, storage } from "@/lib/firebase";
-import { useAuth } from "@/hooks/useAuth";
-import { toast } from "sonner";
+// src/pages/ProductDetailPage.tsx
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import {
+  doc,
+  getDoc,
+  collection,
+  addDoc,
+  serverTimestamp,
+} from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { EquipmentItem } from "@/types";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Loader2, PlusCircle, UploadCloud } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Card, CardContent } from "@/components/ui/card";
+import { toast } from "sonner";
+import { Loader2, Star, MapPin } from "lucide-react";
+import { DateRange } from "react-day-picker";
+import { addDays, format, differenceInCalendarDays } from "date-fns";
+import { useAuth } from "@/hooks/useAuth";
+import { mockEquipmentItems } from "@/data/mockData";
 
-export default function AddEquipmentPage() {
-  const { user } = useAuth();
+export default function ProductDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const { user, loading: userLoading } = useAuth();
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-    price: "",
-    category: "",
-    location: "",
+  const [equipment, setEquipment] = useState<EquipmentItem | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [bookingLoading, setBookingLoading] = useState(false);
+  const today = new Date();
+  const [date, setDate] = useState<DateRange | undefined>({
+    from: today,
+    to: addDays(today, 4),
   });
 
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+  useEffect(() => {
+    const fetchEquipment = async () => {
+      if (!id) return;
+      setLoading(true);
+      // Handle mock data
+      if (id.startsWith("mock-")) {
+        setEquipment(mockEquipmentItems.find((item) => item.id === id) || null);
+        setLoading(false);
+        return;
+      }
+      // Fetch real data from Firestore
+      try {
+        const docRef = doc(db, "equipment", id);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setEquipment({ id: docSnap.id, ...docSnap.data() } as EquipmentItem);
+        } else {
+          toast.error("Equipment not found.");
+          navigate("/equipment");
+        }
+      } catch (error) {
+        toast.error("Failed to fetch equipment details.");
+      }
+      setLoading(false);
+    };
+    fetchEquipment();
+  }, [id, navigate]);
 
-  const handleSelectChange = (value: string) => {
-    setFormData((prev) => ({ ...prev, category: value }));
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setImageFile(file);
-      setPreviewUrl(URL.createObjectURL(file));
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || user.role !== "owner") {
-      toast.error("You must be an owner to list equipment.");
-      return;
-    }
-    if (!imageFile) {
-      toast.error("Please upload an image for the equipment.");
-      return;
-    }
-    setIsLoading(true);
-    try {
-      const imageRef = ref(
-        storage,
-        `equipment-images/${Date.now()}-${imageFile.name}`
-      );
-      await uploadBytes(imageRef, imageFile);
-      const imageUrl = await getDownloadURL(imageRef);
-
-      await addDoc(collection(db, "equipment"), {
-        ...formData,
-        price: Number(formData.price),
-        ownerId: user.id,
-        image: imageUrl,
-        rating: 0,
-        reviews: 0,
-        availability: "Available",
-        status: "approved",
-        createdAt: serverTimestamp(),
+  const handleBooking = async () => {
+    if (!user) {
+      toast.error("Please log in to make a rental request.", {
+        action: { label: "Login", onClick: () => navigate("/login") },
       });
-      toast.success("Equipment listed successfully!", {
-        description: "It is now live on the equipment page.",
+      return;
+    }
+    if (user.role !== "renter") {
+      toast.error("Only renters can book equipment.");
+      return;
+    }
+    if (!date?.from || !date?.to || !equipment) {
+      toast.error("Please select a valid date range.");
+      return;
+    }
+    if (user.id === equipment.ownerId) {
+      toast.error("You cannot rent your own equipment.");
+      return;
+    }
+    setBookingLoading(true);
+    try {
+      await addDoc(collection(db, "bookings"), {
+        userId: user.id,
+        renterEmail: user.email,
+        equipmentId: equipment.id,
+        equipmentName: equipment.name,
+        ownerId: equipment.ownerId,
+        startDate: date.from,
+        endDate: date.to,
+        totalPrice: calculatePrice(),
+        status: "pending" as const,
+        bookedAt: serverTimestamp(),
+      });
+      if (equipment.ownerId) {
+        await addDoc(collection(db, "notifications"), {
+          userId: equipment.ownerId,
+          message: `New rental request for ${equipment.name}.`,
+          link: "/owner/requests",
+          isRead: false,
+          createdAt: serverTimestamp(),
+        });
+      }
+      toast.success("Request Sent!", {
+        description: `Your request for ${equipment.name} is now pending approval.`,
       });
       navigate("/dashboard");
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "An unknown error occurred.";
-      toast.error("Failed to list equipment", { description: errorMessage });
+      console.error("Booking Error:", error);
+      toast.error("Failed to send request.", {
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+      });
     } finally {
-      setIsLoading(false);
+      setBookingLoading(false);
     }
   };
 
+  const calculatePrice = () => {
+    if (date?.from && date?.to && equipment) {
+      const days = differenceInCalendarDays(date.to, date.from) + 1;
+      return days > 0 ? days * equipment.price : equipment.price;
+    }
+    return 0;
+  };
+
+  if (loading || userLoading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
+  if (!equipment) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center text-white">
+        Equipment not found.
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="container mx-auto px-4 py-24">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="max-w-2xl mx-auto"
-        >
-          <Card className="bg-surface/30 border-border">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-2xl">
-                <PlusCircle /> List New Equipment
-              </CardTitle>
-              <CardDescription>
-                Fill out the form below to add your equipment to the platform.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="space-y-2">
-                  <Label>Equipment Image</Label>
-                  <div className="flex items-center justify-center w-full">
-                    <label
-                      htmlFor="dropzone-file"
-                      className="flex flex-col items-center justify-center w-full h-64 border-2 border-border border-dashed rounded-lg cursor-pointer bg-black/20 hover:bg-black/40"
-                    >
-                      {previewUrl ? (
-                        <img
-                          src={previewUrl}
-                          alt="Preview"
-                          className="w-full h-full object-contain rounded-lg p-2"
-                        />
-                      ) : (
-                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                          <UploadCloud className="w-8 h-8 mb-4 text-text-muted" />
-                          <p className="mb-2 text-sm text-text-muted">
-                            <span className="font-semibold">
-                              Click to upload
-                            </span>{" "}
-                            or drag and drop
-                          </p>
-                          <p className="text-xs text-text-muted">
-                            PNG, JPG, or WEBP (MAX. 5MB)
-                          </p>
-                        </div>
-                      )}
-                      <input
-                        id="dropzone-file"
-                        type="file"
-                        className="hidden"
-                        onChange={handleFileChange}
-                        accept="image/png, image/jpeg, image/webp"
+      <div className="pt-20">
+        <div className="container mx-auto px-4 py-8">
+          <div className="grid lg:grid-cols-3 gap-12">
+            <div className="lg:col-span-2">
+              <img
+                src={equipment.image}
+                alt={equipment.name}
+                className="w-full h-auto max-h-[500px] object-cover rounded-2xl border border-border shadow-lg"
+              />
+              <div className="mt-8">
+                <h1 className="text-4xl font-bold text-foreground mb-4">
+                  {equipment.name}
+                </h1>
+                <div className="flex items-center gap-6 mb-4 text-text-secondary">
+                  <div className="flex items-center gap-1">
+                    <Star className="w-5 h-5 fill-primary text-primary" />{" "}
+                    <span className="font-medium">{equipment.rating}</span>{" "}
+                    <span>({equipment.reviews} reviews)</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <MapPin className="w-5 h-5" />{" "}
+                    <span>{equipment.location}</span>
+                  </div>
+                </div>
+                <p className="text-text-secondary leading-relaxed">
+                  {equipment.description}
+                </p>
+              </div>
+            </div>
+            <div>
+              {/* --- THIS IS THE KEY CHANGE --- */}
+              {/* The entire booking card is now only shown if the user is a RENTER */}
+              {user && user.role === "renter" && (
+                <Card className="bg-surface border-border shadow-glow sticky top-24">
+                  <CardContent className="p-6">
+                    <div className="mb-4">
+                      <span className="text-3xl font-bold text-primary">
+                        ₹{equipment.price.toLocaleString("en-IN")}
+                      </span>
+                      <span className="text-text-muted">/day</span>
+                    </div>
+                    <div className="flex justify-center">
+                      <Calendar
+                        mode="range"
+                        selected={date}
+                        onSelect={setDate}
+                        numberOfMonths={1}
+                        disabled={{ before: today }}
                       />
-                    </label>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="name">Equipment Name</Label>
-                  <Input
-                    id="name"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    name="description"
-                    value={formData.description}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="price">Price per Day (₹)</Label>
-                    <Input
-                      id="price"
-                      name="price"
-                      type="number"
-                      value={formData.price}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="category">Category</Label>
-                    <Select
-                      name="category"
-                      onValueChange={handleSelectChange}
-                      value={formData.category}
-                      required
+                    </div>
+                    <div className="mt-6 space-y-4">
+                      <div className="flex justify-between items-center">
+                        <span className="text-text-secondary">
+                          Selected Dates
+                        </span>
+                        <span className="font-medium text-foreground">
+                          {date?.from ? format(date.from, "dd LLL") : ""} -{" "}
+                          {date?.to ? format(date.to, "dd LLL y") : ""}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center text-lg">
+                        <span className="font-semibold text-text-secondary">
+                          Total Price
+                        </span>
+                        <span className="font-bold text-primary">
+                          ₹{calculatePrice().toLocaleString("en-IN")}
+                        </span>
+                      </div>
+                    </div>
+                    <Button
+                      onClick={handleBooking}
+                      disabled={bookingLoading}
+                      size="lg"
+                      className="w-full mt-6"
+                      variant="hero"
                     >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Photography">Photography</SelectItem>
-                        <SelectItem value="Tools">Tools</SelectItem>
-                        <SelectItem value="Aerial">Aerial</SelectItem>
-                        <SelectItem value="Power">Power</SelectItem>
-                        <SelectItem value="Lighting">Lighting</SelectItem>
-                        <SelectItem value="Audio">Audio</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="location">Location</Label>
-                  <Input
-                    id="location"
-                    name="location"
-                    value={formData.location}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-                <Button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full"
-                  size="lg"
-                  variant="hero"
-                >
-                  {isLoading ? (
-                    <Loader2 className="animate-spin" />
-                  ) : (
-                    "Add Equipment"
-                  )}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        </motion.div>
+                      {bookingLoading ? (
+                        <Loader2 className="animate-spin" />
+                      ) : (
+                        "Request to Rent"
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

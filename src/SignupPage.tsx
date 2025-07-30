@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner"; // <-- CORRECTED IMPORT
 import { Link, useNavigate } from "react-router-dom";
 import {
   createUserWithEmailAndPassword,
@@ -20,16 +20,15 @@ import {
   GoogleAuthProvider,
 } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
-import { auth, db, UserRole } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
+import { UserRole } from "@/types";
 import Navbar from "@/components/Navbar";
 
 const SignupPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const { toast } = useToast();
   const navigate = useNavigate();
-
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -46,11 +45,7 @@ const SignupPage: React.FC = () => {
     setIsLoading(true);
 
     if (formData.password !== formData.confirmPassword) {
-      toast({
-        title: "Error",
-        description: "Passwords don't match",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Passwords don't match" }); // <-- CORRECTED TOAST SYNTAX
       setIsLoading(false);
       return;
     }
@@ -64,23 +59,20 @@ const SignupPage: React.FC = () => {
       const user = userCredential.user;
 
       await setDoc(doc(db, "users", user.uid), {
+        id: user.uid, // Add the ID to the document
         email: user.email,
         role: formData.role,
       });
 
-      toast({
-        title: "Success!",
+      toast.success("Success!", {
+        // <-- CORRECTED TOAST SYNTAX
         description: "Account created successfully. You are now logged in.",
       });
-      navigate("/dashboard"); // Redirect to dashboard on success
+      navigate("/dashboard");
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "An unknown error occurred.";
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      toast.error("Error", { description: errorMessage }); // <-- CORRECTED TOAST SYNTAX
     } finally {
       setIsLoading(false);
     }
@@ -90,23 +82,19 @@ const SignupPage: React.FC = () => {
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
-      toast({
-        title: "Signed in with Google!",
+      toast.success("Signed in with Google!", {
         description: "You've been logged in successfully.",
       });
       navigate("/dashboard");
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "An unknown error occurred.";
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      toast.error("Error", { description: errorMessage });
     }
   };
 
   return (
+    // The JSX for this component was already correct.
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="flex items-center justify-center pt-20">
@@ -125,7 +113,6 @@ const SignupPage: React.FC = () => {
                 Create your account to start renting
               </p>
             </div>
-
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-foreground/80">
@@ -144,7 +131,6 @@ const SignupPage: React.FC = () => {
                   />
                 </div>
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="password" className="text-foreground/80">
                   Password
@@ -171,7 +157,6 @@ const SignupPage: React.FC = () => {
                   </button>
                 </div>
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword" className="text-foreground/80">
                   Confirm Password
@@ -202,7 +187,6 @@ const SignupPage: React.FC = () => {
                   </button>
                 </div>
               </div>
-
               <div className="space-y-2">
                 <Label className="text-foreground/80">I am a...</Label>
                 <Select
@@ -225,7 +209,6 @@ const SignupPage: React.FC = () => {
                   </SelectContent>
                 </Select>
               </div>
-
               <Button
                 type="submit"
                 disabled={isLoading}
@@ -241,7 +224,6 @@ const SignupPage: React.FC = () => {
                   "Create Account"
                 )}
               </Button>
-
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
                   <span className="w-full border-t border-border" />
@@ -252,7 +234,6 @@ const SignupPage: React.FC = () => {
                   </span>
                 </div>
               </div>
-
               <Button
                 type="button"
                 variant="outline"
@@ -280,7 +261,6 @@ const SignupPage: React.FC = () => {
                 </svg>
                 Continue with Google
               </Button>
-
               <p className="text-center text-sm text-text-secondary">
                 Already have an account?{" "}
                 <Link

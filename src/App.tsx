@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Navbar from "./components/Navbar"; // Import Navbar
+import Navbar from "./components/Navbar";
 
 // Page Imports
 import Index from "./pages/Index";
@@ -25,15 +25,18 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <BrowserRouter>
-        <Navbar /> {/* The Navbar is rendered here, outside the Routes */}
+        <Navbar />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/equipment" element={<Equipment />} />
+          <Route path="/equipment/new" element={<AddEquipmentPage />} />
+
+          {/* This route directs to the page we just created */}
           <Route path="/equipment/:id" element={<ProductDetailPage />} />
+
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/equipment/new" element={<AddEquipmentPage />} />
           <Route
             path="/owner/listings/edit/:id"
             element={<EditEquipmentPage />}
@@ -43,8 +46,7 @@ const App = () => (
           <Route path="/signup" element={<SignupPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
-        <Toaster />{" "}
-        {/* This is required for sonner toasts/notifications to show */}
+        <Toaster />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

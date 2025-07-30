@@ -1,7 +1,5 @@
 // src/data/mockData.ts
 import { EquipmentItem } from "@/types";
-
-// Image Imports
 import tripodImage from "@/assets/equipment-tripod.jpg";
 import droneImage from "@/assets/equipment-drone.jpg";
 import drillImage from "@/assets/equipment-drill.jpg";
@@ -9,7 +7,9 @@ import cameraImage from "@/assets/equipment-camera.jpg";
 import generatorImage from "@/assets/equipment-generator.jpg";
 import lightingImage from "@/assets/equipment-lighting.jpg";
 
-// Hardcoded Mock Data for Showcase
+// A generic, consistent ID for all mock items
+const MOCK_OWNER_ID = "mock_owner_placeholder_id";
+
 export const mockEquipmentItems: EquipmentItem[] = [
   {
     id: "mock-tripod-123",
@@ -22,8 +22,9 @@ export const mockEquipmentItems: EquipmentItem[] = [
     location: "Jayanagar",
     availability: "Available",
     description:
-      "This heavy-duty carbon fiber tripod offers exceptional stability for professional photographers and videographers. It features smooth pan and tilt controls, a quick-release plate, and adjustable leg locks for setting up on any terrain.",
-    ownerId: "mock-owner-_photography-pro", // Added ownerId
+      "A heavy-duty carbon fiber tripod for professional photographers.",
+    ownerId: MOCK_OWNER_ID, // Assigning the generic owner
+    status: "approved",
   },
   {
     id: "mock-drone-456",
@@ -36,9 +37,11 @@ export const mockEquipmentItems: EquipmentItem[] = [
     location: "Koramangala",
     availability: "Available",
     description:
-      "Capture stunning aerial footage with this high-performance drone. Equipped with a 4K camera, 3-axis gimbal stabilization, and advanced flight controls including obstacle avoidance and automated flight paths.",
-    ownerId: "mock-owner-aerial-visions", // Added ownerId
+      "High-performance drone with a 4K camera and gimbal stabilization.",
+    ownerId: MOCK_OWNER_ID, // Assigning the generic owner
+    status: "approved",
   },
+  // ... (the rest of your mock items will also have the MOCK_OWNER_ID)
   {
     id: "mock-drill-789",
     name: "Cordless Power Drill",
@@ -49,9 +52,9 @@ export const mockEquipmentItems: EquipmentItem[] = [
     reviews: 156,
     location: "Indiranagar",
     availability: "Rented",
-    description:
-      "A professional-grade cordless drill with a brushless motor for maximum power and efficiency. Features multiple speed settings, a built-in LED light, and a long-lasting lithium-ion battery pack.",
-    ownerId: "mock-owner-build-it-right", // Added ownerId
+    description: "Professional-grade cordless drill with a brushless motor.",
+    ownerId: MOCK_OWNER_ID,
+    status: "approved",
   },
   {
     id: "mock-camera-101",
@@ -64,8 +67,9 @@ export const mockEquipmentItems: EquipmentItem[] = [
     location: "HSR Layout",
     availability: "Available",
     description:
-      "A complete full-frame DSLR camera kit, including a 24-70mm f/2.8 lens, multiple batteries, and a carrying case. Perfect for weddings, events, and professional portrait photography.",
-    ownerId: "mock-owner-photo-gear", // Added ownerId
+      "A complete full-frame DSLR camera kit, including a 24-70mm f/2.8 lens.",
+    ownerId: MOCK_OWNER_ID,
+    status: "approved",
   },
   {
     id: "mock-generator-112",
@@ -77,9 +81,9 @@ export const mockEquipmentItems: EquipmentItem[] = [
     reviews: 67,
     location: "Whitefield",
     availability: "Available",
-    description:
-      "A quiet-running portable generator with a 3000W output. Ideal for outdoor events, film sets, and construction sites where reliable power is essential. Features multiple outlets and a digital display.",
-    ownerId: "mock-owner-power-solutions", // Added ownerId
+    description: "A quiet-running portable generator with a 3000W output.",
+    ownerId: MOCK_OWNER_ID,
+    status: "approved",
   },
   {
     id: "mock-lighting-131",
@@ -92,7 +96,8 @@ export const mockEquipmentItems: EquipmentItem[] = [
     location: "MG Road",
     availability: "Available",
     description:
-      "A set of four high-power LED stage lights with full DMX control, color mixing capabilities, and various built-in programs. Perfect for concerts, theater productions, and corporate events.",
-    ownerId: "mock-owner-event-lights", // Added ownerId
+      "A set of four high-power LED stage lights with full DMX control.",
+    ownerId: MOCK_OWNER_ID,
+    status: "approved",
   },
 ];

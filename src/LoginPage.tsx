@@ -1,12 +1,12 @@
 // src/pages/LoginPage.tsx
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { Eye, EyeOff, Mail, Lock, X } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner"; // <-- CORRECTED IMPORT
 import { Link, useNavigate } from "react-router-dom";
 import {
   signInWithEmailAndPassword,
@@ -21,13 +21,8 @@ const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const { toast } = useToast();
   const navigate = useNavigate();
-
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
+  const [formData, setFormData] = useState({ email: "", password: "" });
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -36,22 +31,17 @@ const LoginPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
     try {
       await signInWithEmailAndPassword(auth, formData.email, formData.password);
-      toast({
-        title: "Welcome back!",
+      toast.success("Welcome back!", {
+        // <-- CORRECTED TOAST SYNTAX
         description: "You've been logged in successfully.",
       });
-      navigate("/dashboard"); // Redirect to dashboard on success
+      navigate("/dashboard");
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "An unknown error occurred.";
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      toast.error("Error", { description: errorMessage }); // <-- CORRECTED TOAST SYNTAX
     } finally {
       setIsLoading(false);
     }
@@ -61,49 +51,38 @@ const LoginPage: React.FC = () => {
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
-      toast({
-        title: "Signed in with Google!",
+      toast.success("Signed in with Google!", {
         description: "You've been logged in successfully.",
       });
-      navigate("/dashboard"); // Redirect to dashboard on success
+      navigate("/dashboard");
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "An unknown error occurred.";
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      toast.error("Error", { description: errorMessage });
     }
   };
 
   const handleForgotPassword = async () => {
     if (!formData.email) {
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: "Please enter your email address to reset password.",
-        variant: "destructive",
       });
       return;
     }
     try {
       await sendPasswordResetEmail(auth, formData.email);
-      toast({
-        title: "Reset email sent",
+      toast.info("Reset email sent", {
         description: "Check your email for password reset instructions.",
       });
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "An unknown error occurred.";
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      toast.error("Error", { description: errorMessage });
     }
   };
 
   return (
+    // The JSX for this component was already correct.
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="flex items-center justify-center pt-20">
@@ -122,7 +101,6 @@ const LoginPage: React.FC = () => {
                 Sign in to access your dashboard
               </p>
             </div>
-
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-foreground/80">
@@ -141,7 +119,6 @@ const LoginPage: React.FC = () => {
                   />
                 </div>
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="password" className="text-foreground/80">
                   Password
@@ -168,7 +145,6 @@ const LoginPage: React.FC = () => {
                   </button>
                 </div>
               </div>
-
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   <Checkbox
@@ -194,7 +170,6 @@ const LoginPage: React.FC = () => {
                   Forgot password?
                 </button>
               </div>
-
               <Button
                 type="submit"
                 disabled={isLoading}
@@ -210,7 +185,6 @@ const LoginPage: React.FC = () => {
                   "Sign In"
                 )}
               </Button>
-
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
                   <span className="w-full border-t border-border" />
@@ -221,7 +195,6 @@ const LoginPage: React.FC = () => {
                   </span>
                 </div>
               </div>
-
               <Button
                 type="button"
                 variant="outline"
@@ -249,7 +222,6 @@ const LoginPage: React.FC = () => {
                 </svg>
                 Continue with Google
               </Button>
-
               <p className="text-center text-sm text-text-secondary">
                 Don't have an account?{" "}
                 <Link

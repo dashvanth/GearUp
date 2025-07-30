@@ -3,8 +3,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import { db, storage } from "@/lib/firebase";
+import { db } from "@/lib/firebase"; // Storage is no longer needed here
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
@@ -26,20 +25,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, PlusCircle, UploadCloud } from "lucide-react";
+import { Loader2, PlusCircle, Link as LinkIcon } from "lucide-react";
 
 export default function AddEquipmentPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     price: "",
     category: "",
     location: "",
+    imageUrl: "", // We now use a simple URL field
   });
 
   const handleInputChange = (
@@ -53,38 +51,29 @@ export default function AddEquipmentPage() {
     setFormData((prev) => ({ ...prev, category: value }));
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setImageFile(file);
-      setPreviewUrl(URL.createObjectURL(file));
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || user.role !== "owner") {
       toast.error("You must be an owner to list equipment.");
       return;
     }
-    if (!imageFile) {
-      toast.error("Please upload an image for the equipment.");
+    // Check if the imageUrl field is filled
+    if (!formData.imageUrl) {
+      toast.error("Please provide an image URL for the equipment.");
       return;
     }
+
     setIsLoading(true);
     try {
-      const imageRef = ref(
-        storage,
-        `equipment-images/${Date.now()}-${imageFile.name}`
-      );
-      await uploadBytes(imageRef, imageFile);
-      const imageUrl = await getDownloadURL(imageRef);
-
+      // No file upload needed! Just save the data.
       await addDoc(collection(db, "equipment"), {
-        ...formData,
+        name: formData.name,
+        description: formData.description,
         price: Number(formData.price),
+        category: formData.category,
+        location: formData.location,
+        image: formData.imageUrl, // Save the URL to the 'image' field
         ownerId: user.id,
-        image: imageUrl,
         rating: 0,
         reviews: 0,
         availability: "Available",
@@ -124,43 +113,23 @@ export default function AddEquipmentPage() {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-6">
+                {/* --- THIS IS THE NEW, SIMPLIFIED IMAGE SECTION --- */}
                 <div className="space-y-2">
-                  <Label>Equipment Image</Label>
-                  <div className="flex items-center justify-center w-full">
-                    <label
-                      htmlFor="dropzone-file"
-                      className="flex flex-col items-center justify-center w-full h-64 border-2 border-border border-dashed rounded-lg cursor-pointer bg-black/20 hover:bg-black/40"
-                    >
-                      {previewUrl ? (
-                        <img
-                          src={previewUrl}
-                          alt="Preview"
-                          className="w-full h-full object-contain rounded-lg p-2"
-                        />
-                      ) : (
-                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                          <UploadCloud className="w-8 h-8 mb-4 text-text-muted" />
-                          <p className="mb-2 text-sm text-text-muted">
-                            <span className="font-semibold">
-                              Click to upload
-                            </span>{" "}
-                            or drag and drop
-                          </p>
-                          <p className="text-xs text-text-muted">
-                            PNG, JPG, or WEBP (MAX. 5MB)
-                          </p>
-                        </div>
-                      )}
-                      <input
-                        id="dropzone-file"
-                        type="file"
-                        className="hidden"
-                        onChange={handleFileChange}
-                        accept="image/png, image/jpeg, image/webp"
-                      />
-                    </label>
+                  <Label htmlFor="imageUrl">Equipment Image URL</Label>
+                  <div className="relative">
+                    <LinkIcon className="absolute left-3 top-3 h-4 w-4 text-foreground/40" />
+                    <Input
+                      id="imageUrl"
+                      name="imageUrl"
+                      placeholder="https://example.com/image.jpg"
+                      value={formData.imageUrl}
+                      onChange={handleInputChange}
+                      className="pl-10"
+                      required
+                    />
                   </div>
                 </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="name">Equipment Name</Label>
                   <Input

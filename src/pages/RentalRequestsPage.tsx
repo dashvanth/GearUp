@@ -35,6 +35,12 @@ import {
 import { Loader2, CalendarCheck, HelpCircle } from "lucide-react";
 import { Booking } from "@/types";
 import { format } from "date-fns";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export default function RentalRequestsPage() {
   const { user, loading: userLoading } = useAuth();
@@ -48,9 +54,10 @@ export default function RentalRequestsPage() {
         const fetchRequests = async () => {
           setLoading(true);
           try {
+            // --- THIS IS THE FIX ---
+            // The query now fetches ALL pending requests, regardless of owner.
             const q = query(
               collection(db, "bookings"),
-              where("ownerId", "==", user.id),
               where("status", "==", "pending")
             );
             const querySnapshot = await getDocs(q);
@@ -59,7 +66,7 @@ export default function RentalRequestsPage() {
             );
             setRequests(rentalRequests);
           } catch (error) {
-            toast.error("Failed to fetch your rental requests.");
+            toast.error("Failed to fetch rental requests.");
           } finally {
             setLoading(false);
           }
@@ -80,6 +87,7 @@ export default function RentalRequestsPage() {
     try {
       const docRef = doc(db, "bookings", booking.id);
       await updateDoc(docRef, { status: newStatus });
+
       await addDoc(collection(db, "notifications"), {
         userId: booking.userId,
         message: `Your request for ${booking.equipmentName} was ${newStatus}.`,
@@ -87,6 +95,7 @@ export default function RentalRequestsPage() {
         isRead: false,
         createdAt: serverTimestamp(),
       });
+
       setRequests((prev) => prev.filter((req) => req.id !== booking.id));
       toast.success(`Request has been ${newStatus}.`);
     } catch (error) {
@@ -114,10 +123,11 @@ export default function RentalRequestsPage() {
           <Card className="bg-surface/30 border-border">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-2xl">
-                <CalendarCheck /> My Rental Requests
+                <CalendarCheck /> All Pending Requests
               </CardTitle>
               <CardDescription>
-                Approve or reject incoming rental requests for your equipment.
+                Review all pending requests and manage the ones for your
+                equipment.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -127,7 +137,7 @@ export default function RentalRequestsPage() {
                     <TableRow>
                       <TableHead>Equipment</TableHead>
                       <TableHead>Renter Email</TableHead>
-                      <TableHead>Dates</TableHead>
+                      <TableHead>Owner ID</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -138,33 +148,59 @@ export default function RentalRequestsPage() {
                           {req.equipmentName}
                         </TableCell>
                         <TableCell>{req.renterEmail}</TableCell>
-                        <TableCell>
-                          {format(
-                            new Date(req.startDate.seconds * 1000),
-                            "dd LLL"
-                          )}{" "}
-                          -{" "}
-                          {format(
-                            new Date(req.endDate.seconds * 1000),
-                            "dd LLL"
-                          )}
+                        <TableCell className="text-xs text-text-muted">
+                          {req.ownerId}
                         </TableCell>
                         <TableCell className="text-right space-x-2">
-                          <Button
-                            size="sm"
-                            onClick={() =>
-                              handleRequestUpdate(req, "confirmed")
-                            }
-                          >
-                            Approve
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleRequestUpdate(req, "rejected")}
-                          >
-                            Reject
-                          </Button>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span tabIndex={0}>
+                                  <Button
+                                    size="sm"
+                                    onClick={() =>
+                                      handleRequestUpdate(req, "confirmed")
+                                    }
+                                    disabled={req.ownerId !== user?.id}
+                                  >
+                                    Approve
+                                  </Button>
+                                </span>
+                              </TooltipTrigger>
+                              {req.ownerId !== user?.id && (
+                                <TooltipContent>
+                                  <p>
+                                    You can only approve requests for your own
+                                    items.
+                                  </p>
+                                </TooltipContent>
+                              )}
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span tabIndex={0}>
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() =>
+                                      handleRequestUpdate(req, "rejected")
+                                    }
+                                    disabled={req.ownerId !== user?.id}
+                                  >
+                                    Reject
+                                  </Button>
+                                </span>
+                              </TooltipTrigger>
+                              {req.ownerId !== user?.id && (
+                                <TooltipContent>
+                                  <p>
+                                    You can only reject requests for your own
+                                    items.
+                                  </p>
+                                </TooltipContent>
+                              )}
+                            </Tooltip>
+                          </TooltipProvider>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -177,8 +213,8 @@ export default function RentalRequestsPage() {
                     No Pending Requests
                   </h3>
                   <p className="mt-1 text-sm text-text-secondary">
-                    You currently have no pending rental requests for your
-                    items.
+                    There are currently no pending rental requests on the
+                    platform.
                   </p>
                 </div>
               )}

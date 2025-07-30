@@ -7,7 +7,7 @@ import {
 } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
-import { toast } from "sonner";
+import { toast } from "sonner"; // Using sonner for consistency
 import { UserRole, PlatformUser } from "@/types";
 
 export interface AuthUser {
@@ -36,12 +36,12 @@ export const useAuth = () => {
               role: userData.role || "renter",
             });
           } else {
-            // This can happen if a user is in Auth but their DB entry was deleted.
-            // We'll treat them as a new user and create their document.
+            // This case handles Google Sign-In for new users,
+            // or if a user's DB record was somehow deleted.
             const newUser: PlatformUser = {
               id: firebaseUser.uid,
               email: firebaseUser.email!,
-              role: "renter", // Default to renter if their doc is missing
+              role: "renter",
             };
             await setDoc(userDocRef, newUser);
             setUser(newUser);
@@ -52,7 +52,6 @@ export const useAuth = () => {
         setLoading(false);
       }
     );
-
     return () => unsubscribe();
   }, []);
 
@@ -67,9 +66,5 @@ export const useAuth = () => {
     }
   };
 
-  return {
-    user,
-    loading,
-    signOut,
-  };
+  return { user, loading, signOut };
 };
