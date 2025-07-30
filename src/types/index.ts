@@ -14,9 +14,10 @@ export interface EquipmentItem {
   availability: "Available" | "Rented";
   description: string;
   ownerId?: string;
-  status?: "pending" | "approved" | "rejected"; // <-- Ensure this line is present
+  status?: "pending" | "approved" | "rejected";
 }
 
+// UPDATED Booking interface
 export interface Booking {
   id: string;
   userId: string;
@@ -25,7 +26,7 @@ export interface Booking {
   startDate: { seconds: number; nanoseconds: number };
   endDate: { seconds: number; nanoseconds: number };
   totalPrice: number;
-  status: string;
+  status: "pending" | "confirmed" | "rejected"; // Changed from string
 }
 
 export interface PlatformUser {
