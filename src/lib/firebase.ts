@@ -2,42 +2,32 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
-import { getAnalytics } from "firebase/analytics";
-// Import the functions you need from the SDKs you need
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+import { getStorage } from "firebase/storage"; // <-- ADD THIS IMPORT
 
 // Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+// Make sure your actual config is here, especially the storageBucket
 const firebaseConfig = {
-  apiKey: "AIzaSyCEqxIlVwEPdO6W8oMJT6xMMzhyTTtiG3Q",
-  authDomain: "gearup-rentals-66f77.firebaseapp.com",
-  projectId: "gearup-rentals-66f77",
-  storageBucket: "gearup-rentals-66f77.firebasestorage.app",
-  messagingSenderId: "41416783757",
-  appId: "1:41416783757:web:c79d1a4cee74db5c616fc4",
-  measurementId: "G-DT9VMQ6TFE",
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_AUTH_DOMAIN",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT_ID.appspot.com", // This line is crucial for uploads
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId: "YOUR_APP_ID",
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
-// --- PASTE YOUR FIREBASE CONFIGURATION FROM THE FIREBASE CONSOLE HERE ---
-
-// Initialize Firebase
-
-// Initialize Firebase services
 const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app); // <-- ADD THIS LINE TO INITIALIZE STORAGE
 
-// Define user roles
-export type UserRole = "admin" | "owner" | "renter";
+// --- CORE TYPE DEFINITIONS ---
+export type UserRole = "owner" | "renter";
 
-// Define the structure of your authenticated user
 export interface AuthUser {
   id: string;
   email: string | null;
   role: UserRole;
 }
 
-export { app, auth, db };
+export { app, auth, db, storage }; // <-- ADD `storage` TO THE EXPORT LIST

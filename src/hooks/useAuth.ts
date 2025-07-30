@@ -5,14 +5,20 @@ import {
   User,
   signOut as firebaseSignOut,
 } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
-import { auth, db, AuthUser, UserRole } from "@/lib/firebase";
-import { useToast } from "@/hooks/use-toast";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
+import { toast } from "sonner";
+import { UserRole, PlatformUser } from "@/types";
+
+export interface AuthUser {
+  id: string;
+  email: string | null;
+  role: UserRole;
+}
 
 export const useAuth = () => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(
@@ -22,14 +28,24 @@ export const useAuth = () => {
           const userDocRef = doc(db, "users", firebaseUser.uid);
           const userDoc = await getDoc(userDocRef);
 
-          const userData = userDoc.data();
-          const role: UserRole = userData?.role || "renter";
-
-          setUser({
-            id: firebaseUser.uid,
-            email: firebaseUser.email,
-            role: role,
-          });
+          if (userDoc.exists()) {
+            const userData = userDoc.data() as PlatformUser;
+            setUser({
+              id: firebaseUser.uid,
+              email: firebaseUser.email,
+              role: userData.role || "renter",
+            });
+          } else {
+            // This can happen if a user is in Auth but their DB entry was deleted.
+            // We'll treat them as a new user and create their document.
+            const newUser: PlatformUser = {
+              id: firebaseUser.uid,
+              email: firebaseUser.email!,
+              role: "renter", // Default to renter if their doc is missing
+            };
+            await setDoc(userDocRef, newUser);
+            setUser(newUser);
+          }
         } else {
           setUser(null);
         }
@@ -43,20 +59,11 @@ export const useAuth = () => {
   const signOut = async () => {
     try {
       await firebaseSignOut(auth);
-      toast({
-        title: "Signed out",
-        description: "You've been successfully signed out.",
-      });
+      toast.success("Signed out successfully.");
     } catch (error) {
       const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "An unknown error occurred while signing out.";
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
+        error instanceof Error ? error.message : "An unknown error occurred.";
+      toast.error("Failed to sign out", { description: errorMessage });
     }
   };
 

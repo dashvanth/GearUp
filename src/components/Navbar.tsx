@@ -1,24 +1,143 @@
+// src/components/Navbar.tsx
 import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Settings } from "lucide-react";
-import { AuthButton } from "@/components/auth/AuthButton";
+import { Menu, X, Settings, Bell } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  collection,
+  query,
+  where,
+  onSnapshot,
+  orderBy,
+  limit,
+  doc,
+  updateDoc,
+} from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { Notification } from "@/types";
+import { formatDistanceToNow } from "date-fns";
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [hasScrolled, setHasScrolled] = useState(false);
-  const { loading } = useAuth();
+  const { user, loading, signOut } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    const handleScroll = () => {
-      setHasScrolled(window.scrollY > 10);
-    };
+    const handleScroll = () => setHasScrolled(window.scrollY > 10);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      const q = query(
+        collection(db, "notifications"),
+        where("userId", "==", user.id),
+        orderBy("createdAt", "desc"),
+        limit(10)
+      );
+      const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const notifs = querySnapshot.docs.map(
+          (doc) => ({ id: doc.id, ...doc.data() } as Notification)
+        );
+        setNotifications(notifs);
+        setUnreadCount(notifs.filter((n) => !n.isRead).length);
+      });
+      return () => unsubscribe();
+    }
+  }, [user]);
+
+  const handleNotificationClick = async (notification: Notification) => {
+    if (!notification.isRead) {
+      await updateDoc(doc(db, "notifications", notification.id), {
+        isRead: true,
+      });
+    }
+    navigate(notification.link);
+  };
+
+  const AuthContent = () => {
+    if (loading) {
+      return <Skeleton className="h-10 w-48" />;
+    }
+    if (user) {
+      return (
+        <div className="flex items-center gap-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="icon" className="relative">
+                <Bell />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 flex h-2 w-2">
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                  </span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 mr-4">
+              <div className="p-2">
+                <h4 className="font-medium leading-none px-2">Notifications</h4>
+                <div className="mt-2 space-y-1">
+                  {notifications.length > 0 ? (
+                    notifications.map((notif) => (
+                      <div
+                        key={notif.id}
+                        onClick={() => handleNotificationClick(notif)}
+                        className={`p-2 rounded-md cursor-pointer hover:bg-muted/50 ${
+                          !notif.isRead
+                            ? "bg-muted font-medium"
+                            : "text-muted-foreground"
+                        }`}
+                      >
+                        <p className="text-sm">{notif.message}</p>
+                        <p className="text-xs mt-1">
+                          {formatDistanceToNow(
+                            new Date(notif.createdAt.seconds * 1000),
+                            { addSuffix: true }
+                          )}
+                        </p>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-center text-muted-foreground py-4">
+                      No new notifications.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+          <Button variant="outline" onClick={() => navigate("/dashboard")}>
+            Dashboard
+          </Button>
+          <Button variant="destructive" onClick={signOut}>
+            Logout
+          </Button>
+        </div>
+      );
+    }
+    return (
+      <div className="flex items-center gap-2">
+        <Button variant="ghost" onClick={() => navigate("/login")}>
+          Login
+        </Button>
+        <Button variant="hero" onClick={() => navigate("/signup")}>
+          Sign Up
+        </Button>
+      </div>
+    );
+  };
 
   const navLinks = [
     { name: "Home", href: "/" },
@@ -43,8 +162,6 @@ export default function Navbar() {
             </div>
             <span className="text-2xl font-bold text-gradient">GearUp</span>
           </Link>
-
-          {/* --- DESKTOP NAVIGATION (WITH GLOWING EFFECT) --- */}
           <div className="hidden lg:flex items-center space-x-2">
             {navLinks.map((link) => (
               <Button
@@ -59,7 +176,6 @@ export default function Navbar() {
               >
                 <Link to={link.href}>
                   {link.name}
-                  {/* Glowing effect for active/hovered link */}
                   <span
                     className={`absolute bottom-0 left-1/2 -translate-x-1/2 w-3/4 h-1 bg-primary blur-md rounded-full transition-opacity duration-300 ${
                       location.pathname === link.href
@@ -71,11 +187,9 @@ export default function Navbar() {
               </Button>
             ))}
           </div>
-
           <div className="hidden lg:flex items-center space-x-4">
-            {loading ? <Skeleton className="h-10 w-28" /> : <AuthButton />}
+            <AuthContent />
           </div>
-
           <Button
             variant="ghost"
             size="icon"
@@ -90,10 +204,8 @@ export default function Navbar() {
           </Button>
         </div>
       </div>
-
-      {/* Mobile Menu */}
       {isMenuOpen && (
-        <div className="lg:hidden absolute top-20 left-0 w-full bg-black/90 backdrop-blur-lg border-t border-border p-4">
+        <div className="lg:hidden absolute top-20 left-0 w-full bg-black/95 backdrop-blur-lg border-t border-border p-4">
           <div className="flex flex-col space-y-4">
             {navLinks.map((link) => (
               <Button
@@ -108,7 +220,7 @@ export default function Navbar() {
               </Button>
             ))}
             <div className="border-t border-border pt-4">
-              {loading ? <Skeleton className="h-12 w-full" /> : <AuthButton />}
+              <AuthContent />
             </div>
           </div>
         </div>

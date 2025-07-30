@@ -23,6 +23,7 @@ export const mockEquipmentItems: EquipmentItem[] = [
     availability: "Available",
     description:
       "This heavy-duty carbon fiber tripod offers exceptional stability for professional photographers and videographers. It features smooth pan and tilt controls, a quick-release plate, and adjustable leg locks for setting up on any terrain.",
+    ownerId: "mock-owner-_photography-pro", // Added ownerId
   },
   {
     id: "mock-drone-456",
@@ -36,6 +37,7 @@ export const mockEquipmentItems: EquipmentItem[] = [
     availability: "Available",
     description:
       "Capture stunning aerial footage with this high-performance drone. Equipped with a 4K camera, 3-axis gimbal stabilization, and advanced flight controls including obstacle avoidance and automated flight paths.",
+    ownerId: "mock-owner-aerial-visions", // Added ownerId
   },
   {
     id: "mock-drill-789",
@@ -49,6 +51,7 @@ export const mockEquipmentItems: EquipmentItem[] = [
     availability: "Rented",
     description:
       "A professional-grade cordless drill with a brushless motor for maximum power and efficiency. Features multiple speed settings, a built-in LED light, and a long-lasting lithium-ion battery pack.",
+    ownerId: "mock-owner-build-it-right", // Added ownerId
   },
   {
     id: "mock-camera-101",
@@ -62,6 +65,7 @@ export const mockEquipmentItems: EquipmentItem[] = [
     availability: "Available",
     description:
       "A complete full-frame DSLR camera kit, including a 24-70mm f/2.8 lens, multiple batteries, and a carrying case. Perfect for weddings, events, and professional portrait photography.",
+    ownerId: "mock-owner-photo-gear", // Added ownerId
   },
   {
     id: "mock-generator-112",
@@ -75,6 +79,7 @@ export const mockEquipmentItems: EquipmentItem[] = [
     availability: "Available",
     description:
       "A quiet-running portable generator with a 3000W output. Ideal for outdoor events, film sets, and construction sites where reliable power is essential. Features multiple outlets and a digital display.",
+    ownerId: "mock-owner-power-solutions", // Added ownerId
   },
   {
     id: "mock-lighting-131",
@@ -88,5 +93,6 @@ export const mockEquipmentItems: EquipmentItem[] = [
     availability: "Available",
     description:
       "A set of four high-power LED stage lights with full DMX control, color mixing capabilities, and various built-in programs. Perfect for concerts, theater productions, and corporate events.",
+    ownerId: "mock-owner-event-lights", // Added ownerId
   },
 ];

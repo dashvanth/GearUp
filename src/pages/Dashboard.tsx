@@ -1,18 +1,7 @@
 // src/pages/Dashboard.tsx
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import {
-  Package,
-  Calendar,
-  User,
-  Settings,
-  Loader2,
-  CheckCircle,
-  XCircle,
-  Users,
-  Edit,
-  Trash2,
-} from "lucide-react";
+import { Loader2, Edit, Trash2 } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -30,11 +19,10 @@ import {
   where,
   getDocs,
   doc,
-  updateDoc,
   deleteDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Booking, PlatformUser, EquipmentItem } from "@/types";
+import { Booking, EquipmentItem } from "@/types";
 import { format } from "date-fns";
 import {
   Table,
@@ -58,461 +46,75 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-// --- Renter's View (No changes here) ---
-const RenterView = ({
-  bookings,
-  isLoading,
-}: {
-  bookings: Booking[];
-  isLoading: boolean;
-}) => (
-  <Card className="bg-surface/30 border-border">
-    <CardHeader>
-      <CardTitle>My Rentals</CardTitle>
-      <CardDescription>
-        A list of all your active and past equipment rentals.
-      </CardDescription>
-    </CardHeader>
-    <CardContent>
-      {isLoading ? (
-        <div className="flex justify-center py-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      ) : bookings.length > 0 ? (
-        <div className="space-y-4">
-          {bookings.map((booking) => (
-            <div
-              key={booking.id}
-              className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 rounded-lg bg-surface/50 border border-border"
-            >
-              <div>
-                <p className="font-semibold text-foreground">
-                  {booking.equipmentName}
-                </p>
-                <p className="text-sm text-text-muted">
-                  {format(
-                    new Date(booking.startDate.seconds * 1000),
-                    "dd LLL, yyyy"
-                  )}{" "}
-                  -{" "}
-                  {format(
-                    new Date(booking.endDate.seconds * 1000),
-                    "dd LLL, yyyy"
-                  )}
-                </p>
-              </div>
-              <div className="mt-2 md:mt-0 text-right">
-                <p className="font-bold text-primary">
-                  ₹{booking.totalPrice.toLocaleString("en-IN")}
-                </p>
-                <p className="text-xs text-text-secondary capitalize">
-                  {booking.status}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="text-center text-text-muted py-4">
-          You have no rentals yet. Start by Browse our equipment!
-        </p>
-      )}
-    </CardContent>
-  </Card>
-);
-
-// --- UPDATED Owner's View ---
-const OwnerView = ({
-  listings,
-  setListings,
-  isLoading,
-}: {
-  listings: EquipmentItem[];
-  setListings: React.Dispatch<React.SetStateAction<EquipmentItem[]>>;
-  isLoading: boolean;
-}) => {
-  const navigate = useNavigate();
-
-  const handleDelete = async (id: string) => {
-    try {
-      await deleteDoc(doc(db, "equipment", id));
-      setListings((prev) => prev.filter((item) => item.id !== id));
-      toast.success("Listing deleted successfully.");
-    } catch (error) {
-      toast.error("Failed to delete listing.");
-    }
-  };
-
-  return (
-    <Card className="bg-surface/30 border-border">
-      <CardHeader>
-        <div className="flex justify-between items-center">
-          <div>
-            <CardTitle>My Equipment Listings</CardTitle>
-            <CardDescription>Manage your equipment for rent.</CardDescription>
-          </div>
-          <Button variant="hero" onClick={() => navigate("/equipment/new")}>
-            Add New Equipment
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        ) : listings.length > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Price/Day</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {listings.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell className="font-medium">{item.name}</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={
-                        item.availability === "Available"
-                          ? "default"
-                          : "secondary"
-                      }
-                    >
-                      {item.availability}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>₹{item.price.toLocaleString("en-IN")}</TableCell>
-                  <TableCell className="text-right space-x-2">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() =>
-                        navigate(`/owner/listings/edit/${item.id}`)
-                      }
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="destructive" size="icon">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>
-                            Are you absolutely sure?
-                          </AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This will permanently delete your "{item.name}"
-                            listing.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => handleDelete(item.id)}
-                          >
-                            Continue
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        ) : (
-          <div className="text-center py-8">
-            <p className="text-text-muted mb-4">
-              You haven't listed any equipment yet.
-            </p>
-            <Button variant="hero" onClick={() => navigate("/equipment/new")}>
-              List Your First Item
-            </Button>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-};
-
-// --- UPDATED Admin's View ---
-const AdminView = ({
-  allEquipment,
-  setAllEquipment,
-  onUpdate,
-  isLoading,
-}: {
-  allEquipment: EquipmentItem[];
-  setAllEquipment: React.Dispatch<React.SetStateAction<EquipmentItem[]>>;
-  onUpdate: () => void;
-  isLoading: boolean;
-}) => {
-  const navigate = useNavigate();
-
-  const handleApproval = async (
-    id: string,
-    newStatus: "approved" | "rejected"
-  ) => {
-    try {
-      if (newStatus === "approved") {
-        await updateDoc(doc(db, "equipment", id), { status: "approved" });
-        toast.success("Equipment approved and is now live.");
-      } else {
-        await deleteDoc(doc(db, "equipment", id));
-        toast.success("Equipment rejected and has been removed.");
-      }
-      onUpdate();
-    } catch (error) {
-      toast.error("An error occurred while updating the status.");
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    try {
-      await deleteDoc(doc(db, "equipment", id));
-      setAllEquipment((prev) => prev.filter((item) => item.id !== id));
-      toast.success("Listing deleted successfully.");
-    } catch (error) {
-      toast.error("Failed to delete listing.");
-    }
-  };
-
-  const pendingEquipment = allEquipment.filter(
-    (item) => item.status === "pending"
-  );
-  const approvedEquipment = allEquipment.filter(
-    (item) => item.status === "approved"
-  );
-
-  return (
-    <div className="space-y-8">
-      <Card className="bg-surface/30 border-border">
-        <CardHeader>
-          <CardTitle>Pending Equipment Approvals</CardTitle>
-          <CardDescription>
-            Review and approve new equipment listings from owners.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex justify-center py-4">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : pendingEquipment.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Price</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {pendingEquipment.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>{item.name}</TableCell>
-                    <TableCell>₹{item.price.toLocaleString("en-IN")}</TableCell>
-                    <TableCell className="text-right space-x-2">
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        className="text-green-500"
-                        onClick={() => handleApproval(item.id, "approved")}
-                      >
-                        <CheckCircle className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="destructive"
-                        onClick={() => handleApproval(item.id, "rejected")}
-                      >
-                        <XCircle className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <p className="text-center text-text-muted py-4">
-              No equipment pending approval.
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="bg-surface/30 border-border">
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
-              <CardTitle>All Equipment Listings</CardTitle>
-              <CardDescription>
-                Edit or delete any listing on the platform.
-              </CardDescription>
-            </div>
-            <Button variant="outline" onClick={() => navigate("/admin/users")}>
-              <Users className="mr-2 h-4 w-4" />
-              Manage Users
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : approvedEquipment.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Owner ID</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {approvedEquipment.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.name}</TableCell>
-                    <TableCell className="text-xs text-text-muted">
-                      {item.ownerId}
-                    </TableCell>
-                    <TableCell className="text-right space-x-2">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() =>
-                          navigate(`/owner/listings/edit/${item.id}`)
-                        }
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="destructive" size="icon">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>
-                              Are you absolutely sure?
-                            </AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This will permanently delete the "{item.name}"
-                              listing. This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleDelete(item.id)}
-                            >
-                              Continue
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <div className="text-center py-8">
-              <p className="text-text-muted">No approved equipment found.</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
-};
-
-// --- Main Dashboard Component ---
 const Dashboard = () => {
   const { user, loading: userLoading } = useAuth();
   const navigate = useNavigate();
-
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [allUsers, setAllUsers] = useState<PlatformUser[]>([]);
-  const [allEquipment, setAllEquipment] = useState<EquipmentItem[]>([]);
   const [ownerListings, setOwnerListings] = useState<EquipmentItem[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
 
-  const fetchData = async () => {
-    if (!user) return;
-    setDataLoading(true);
-    try {
-      // Fetch data common to all or specific roles
-      if (user.role === "renter") {
-        const q = query(
-          collection(db, "bookings"),
-          where("userId", "==", user.id)
-        );
-        const snapshot = await getDocs(q);
-        setBookings(
-          snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Booking))
-        );
-      } else if (user.role === "owner") {
-        const q = query(
-          collection(db, "equipment"),
-          where("ownerId", "==", user.id)
-        );
-        const snapshot = await getDocs(q);
-        setOwnerListings(
-          snapshot.docs.map(
-            (doc) => ({ id: doc.id, ...doc.data() } as EquipmentItem)
-          )
-        );
-      } else if (user.role === "admin") {
-        const usersSnapshot = await getDocs(collection(db, "users"));
-        setAllUsers(
-          usersSnapshot.docs.map(
-            (doc) => ({ id: doc.id, ...doc.data() } as PlatformUser)
-          )
-        );
-        const equipmentSnapshot = await getDocs(collection(db, "equipment"));
-        setAllEquipment(
-          equipmentSnapshot.docs.map(
-            (doc) => ({ id: doc.id, ...doc.data() } as EquipmentItem)
-          )
-        );
-      }
-    } catch (error) {
-      toast.error("Failed to load dashboard data.");
-      console.error("Failed to fetch data:", error);
-    } finally {
-      setDataLoading(false);
-    }
-  };
-
   useEffect(() => {
-    if (!userLoading && user) {
+    const fetchData = async () => {
+      if (!user) {
+        setDataLoading(false);
+        return;
+      }
+      try {
+        if (user.role === "renter") {
+          const q = query(
+            collection(db, "bookings"),
+            where("userId", "==", user.id)
+          );
+          const snapshot = await getDocs(q);
+          setBookings(
+            snapshot.docs.map(
+              (doc) => ({ id: doc.id, ...doc.data() } as Booking)
+            )
+          );
+        } else if (user.role === "owner") {
+          const q = query(
+            collection(db, "equipment"),
+            where("ownerId", "==", user.id)
+          );
+          const snapshot = await getDocs(q);
+          setOwnerListings(
+            snapshot.docs.map(
+              (doc) => ({ id: doc.id, ...doc.data() } as EquipmentItem)
+            )
+          );
+        }
+      } catch (error) {
+        toast.error("Failed to load dashboard data.");
+      } finally {
+        setDataLoading(false);
+      }
+    };
+    if (!userLoading) {
       fetchData();
     }
   }, [user, userLoading]);
 
-  if (userLoading) {
+  const handleListingDelete = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, "equipment", id));
+      setOwnerListings((prev) => prev.filter((item) => item.id !== id));
+      toast.success("Listing deleted successfully.");
+    } catch (error) {
+      toast.error("Failed to delete listing.");
+    }
+  };
+
+  if (userLoading || dataLoading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
     );
   }
-
   if (!user) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-center">
+      <div className="min-h-screen bg-black flex items-center justify-center text-center">
+        <div>
           <h1 className="text-2xl font-bold text-foreground mb-4">
             Access Denied
           </h1>
@@ -527,113 +129,16 @@ const Dashboard = () => {
     );
   }
 
-  const pendingEquipment = allEquipment.filter(
-    (item) => item.status === "pending"
-  );
-
-  const getDashboardCards = () => {
-    switch (user.role) {
-      case "admin":
-        return [
-          {
-            title: "Total Users",
-            value: allUsers.length.toString(),
-            icon: User,
-            description: "All registered users",
-          },
-          {
-            title: "Total Equipment",
-            value: allEquipment.length.toString(),
-            icon: Package,
-            description: "All listed items",
-          },
-          {
-            title: "Pending Approvals",
-            value: pendingEquipment.length.toString(),
-            icon: Settings,
-            description: "Items needing review",
-          },
-          {
-            title: "Total Bookings",
-            value: "0",
-            icon: Calendar,
-            description: "Platform-wide bookings",
-          },
-        ];
-      case "owner":
-        return [
-          {
-            title: "My Equipment",
-            value: ownerListings.length.toString(),
-            icon: Package,
-            description: "Your active listings",
-          },
-          {
-            title: "Bookings",
-            value: "0",
-            icon: Calendar,
-            description: "Current rentals",
-          },
-          {
-            title: "Revenue",
-            value: "₹0",
-            icon: User,
-            description: "This month",
-          },
-          {
-            title: "Reviews",
-            value: "N/A",
-            icon: Settings,
-            description: "Average rating",
-          },
-        ];
-      default: // Renter
-        return [
-          {
-            title: "Active Rentals",
-            value: bookings.length.toString(),
-            icon: Package,
-            description: "Currently rented",
-          },
-          {
-            title: "Upcoming",
-            value: "0",
-            icon: Calendar,
-            description: "Future bookings",
-          },
-          {
-            title: "Completed",
-            value: "0",
-            icon: User,
-            description: "Past rentals",
-          },
-          {
-            title: "Favorites",
-            value: "0",
-            icon: Settings,
-            description: "Saved equipment",
-          },
-        ];
-    }
-  };
-
   const dashboardDetails = {
-    admin: {
-      title: "Admin Dashboard",
-      description: "Oversee all platform activity, users, and equipment.",
-    },
     owner: {
       title: "Owner Dashboard",
-      description: "Manage your equipment listings and rental requests.",
+      description: "Manage your equipment and rentals.",
     },
     renter: {
       title: "Renter Dashboard",
-      description: "Track your bookings and explore new equipment.",
+      description: "Track your bookings and find gear.",
     },
   };
-
-  const cards = getDashboardCards();
-  const details = dashboardDetails[user.role];
 
   return (
     <div className="min-h-screen bg-black">
@@ -645,69 +150,194 @@ const Dashboard = () => {
             animate={{ opacity: 1, y: 0 }}
           >
             <h1 className="text-4xl font-bold text-foreground mb-2">
-              {details.title}
+              {dashboardDetails[user.role].title}
             </h1>
-            <p className="text-text-secondary">{details.description}</p>
-            <p className="text-sm text-text-muted mt-2">
-              Welcome back, {user.email}!
+            <p className="text-text-secondary">
+              {dashboardDetails[user.role].description}
             </p>
           </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
-          >
-            {cards.map((card, index) => (
-              <motion.div
-                key={card.title}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.1 * index }}
-              >
-                <Card className="bg-surface/50 border-border hover:border-primary/50 transition-all duration-300 hover:shadow-glow-red/20">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium text-foreground/80">
-                      {card.title}
-                    </CardTitle>
-                    <card.icon className="h-4 w-4 text-primary" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-foreground">
-                      {card.value}
-                    </div>
-                    <p className="text-xs text-text-muted">
-                      {card.description}
-                    </p>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-          </motion.div>
-
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
             {user.role === "renter" && (
-              <RenterView bookings={bookings} isLoading={dataLoading} />
+              <Card className="bg-surface/30 border-border">
+                <CardHeader>
+                  <CardTitle>My Rentals</CardTitle>
+                  <CardDescription>
+                    Your active and past equipment rentals.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {bookings.length > 0 ? (
+                    <div className="space-y-4">
+                      {bookings.map((booking) => (
+                        <div
+                          key={booking.id}
+                          className="flex justify-between items-center p-4 rounded-lg bg-surface/50 border border-border"
+                        >
+                          <div>
+                            <p className="font-semibold text-foreground">
+                              {booking.equipmentName}
+                            </p>
+                            <p className="text-sm text-text-muted">
+                              {format(
+                                new Date(booking.startDate.seconds * 1000),
+                                "dd LLL, yyyy"
+                              )}{" "}
+                              -{" "}
+                              {format(
+                                new Date(booking.endDate.seconds * 1000),
+                                "dd LLL, yyyy"
+                              )}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-bold text-primary">
+                              ₹{booking.totalPrice.toLocaleString("en-IN")}
+                            </p>
+                            <Badge
+                              variant={
+                                booking.status === "confirmed"
+                                  ? "default"
+                                  : booking.status === "pending"
+                                  ? "secondary"
+                                  : "destructive"
+                              }
+                              className="capitalize"
+                            >
+                              {booking.status}
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-center text-text-muted py-4">
+                      You have no rentals yet.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
             )}
             {user.role === "owner" && (
-              <OwnerView
-                listings={ownerListings}
-                setListings={setOwnerListings}
-                isLoading={dataLoading}
-              />
-            )}
-            {user.role === "admin" && (
-              <AdminView
-                allEquipment={allEquipment}
-                setAllEquipment={setAllEquipment}
-                onUpdate={fetchData}
-                isLoading={dataLoading}
-              />
+              <Card className="bg-surface/30 border-border">
+                <CardHeader>
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                      <CardTitle>My Equipment Listings</CardTitle>
+                      <CardDescription>
+                        Manage your equipment for rent.
+                      </CardDescription>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => navigate("/owner/requests")}
+                      >
+                        Manage Requests
+                      </Button>
+                      <Button
+                        variant="hero"
+                        onClick={() => navigate("/equipment/new")}
+                      >
+                        Add New Equipment
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {ownerListings.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Price/Day</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {ownerListings.map((item) => (
+                          <TableRow key={item.id}>
+                            <TableCell className="font-medium">
+                              {item.name}
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={
+                                  item.availability === "Available"
+                                    ? "default"
+                                    : "secondary"
+                                }
+                              >
+                                {item.availability}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              ₹{item.price.toLocaleString("en-IN")}
+                            </TableCell>
+                            <TableCell className="text-right space-x-2">
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() =>
+                                  navigate(`/owner/listings/edit/${item.id}`)
+                                }
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="destructive" size="icon">
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>
+                                      Are you absolutely sure?
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This will permanently delete your "
+                                      {item.name}" listing.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>
+                                      Cancel
+                                    </AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() =>
+                                        handleListingDelete(item.id)
+                                      }
+                                    >
+                                      Continue
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-text-muted mb-4">
+                        You haven't listed any equipment yet.
+                      </p>
+                      <Button
+                        variant="hero"
+                        onClick={() => navigate("/equipment/new")}
+                      >
+                        List Your First Item
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             )}
           </motion.div>
         </div>
@@ -715,5 +345,4 @@ const Dashboard = () => {
     </div>
   );
 };
-
 export default Dashboard;

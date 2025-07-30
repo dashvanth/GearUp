@@ -1,6 +1,6 @@
 // src/types/index.ts
 
-export type UserRole = "admin" | "owner" | "renter";
+export type UserRole = "owner" | "renter";
 
 export interface EquipmentItem {
   id: string;
@@ -14,10 +14,9 @@ export interface EquipmentItem {
   availability: "Available" | "Rented";
   description: string;
   ownerId?: string;
-  status?: "pending" | "approved" | "rejected";
+  status?: "approved" | "rejected";
 }
 
-// UPDATED Booking interface
 export interface Booking {
   id: string;
   userId: string;
@@ -26,11 +25,22 @@ export interface Booking {
   startDate: { seconds: number; nanoseconds: number };
   endDate: { seconds: number; nanoseconds: number };
   totalPrice: number;
-  status: "pending" | "confirmed" | "rejected"; // Changed from string
+  status: "pending" | "confirmed" | "rejected";
+  ownerId?: string;
+  renterEmail?: string;
 }
 
 export interface PlatformUser {
   id: string;
   email: string;
   role: UserRole;
+}
+
+export interface Notification {
+  id: string;
+  userId: string;
+  message: string;
+  link: string;
+  isRead: boolean;
+  createdAt: { seconds: number; nanoseconds: number };
 }
