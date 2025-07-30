@@ -31,25 +31,42 @@ import { EquipmentItem } from "@/types";
 
 export default function EditEquipmentPage() {
   const { id } = useParams<{ id: string }>();
-  const { user } = useAuth();
+  const { user } = useAuth(); // We'll use the user object for the ownership check
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState<Partial<EquipmentItem>>({});
 
   useEffect(() => {
     const fetchEquipment = async () => {
-      if (!id) return;
+      // Return early if we don't have the necessary info
+      if (!id || !user) return;
+
       const docRef = doc(db, "equipment", id);
       const docSnap = await getDoc(docRef);
+
       if (docSnap.exists()) {
-        setFormData(docSnap.data());
+        const equipmentData = docSnap.data() as EquipmentItem;
+
+        // --- SECURITY CHECK ---
+        // Verify that the logged-in user is the owner of this equipment
+        if (equipmentData.ownerId !== user.id) {
+          toast.error("Access Denied", {
+            description: "You are not authorized to edit this listing.",
+          });
+          navigate("/dashboard"); // Redirect unauthorized users
+          return;
+        }
+
+        setFormData(equipmentData);
       } else {
         toast.error("Equipment not found.");
         navigate("/owner/listings");
       }
     };
+
+    // We add 'user' to the dependency array to ensure this runs after the user is loaded
     fetchEquipment();
-  }, [id, navigate]);
+  }, [id, navigate, user]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -69,6 +86,7 @@ export default function EditEquipmentPage() {
     setIsLoading(true);
     try {
       const docRef = doc(db, "equipment", id);
+      // The updateDoc will now only be called if the ownership check passed in useEffect
       await updateDoc(docRef, {
         ...formData,
         price: Number(formData.price), // Ensure price is a number
@@ -144,7 +162,6 @@ export default function EditEquipmentPage() {
                       onValueChange={(value) =>
                         handleSelectChange("category", value)
                       }
-                      required
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select a category" />

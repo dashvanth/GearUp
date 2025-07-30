@@ -1,5 +1,7 @@
 // src/types/index.ts
 
+export type UserRole = "admin" | "owner" | "renter";
+
 export interface EquipmentItem {
   id: string;
   name: string;
@@ -29,5 +31,5 @@ export interface Booking {
 export interface PlatformUser {
   id: string;
   email: string;
-  role: "admin" | "owner" | "renter";
+  role: UserRole;
 }

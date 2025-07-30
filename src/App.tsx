@@ -14,8 +14,10 @@ import LoginPage from "./LoginPage";
 import SignupPage from "./SignupPage";
 import ProductDetailPage from "./pages/ProductDetailPage";
 import AddEquipmentPage from "./pages/AddEquipmentPage";
-import ManageListingsPage from "./pages/ManageListingsPage";
+// ManageListingsPage is no longer needed
 import EditEquipmentPage from "./pages/EditEquipmentPage";
+import ManageUsersPage from "./pages/ManageUsersPage";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -32,11 +34,12 @@ const App = () => (
           <Route path="/contact" element={<Contact />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/equipment/new" element={<AddEquipmentPage />} />
-          <Route path="/owner/listings" element={<ManageListingsPage />} />
+          {/* REMOVED the old listings route */}
           <Route
             path="/owner/listings/edit/:id"
             element={<EditEquipmentPage />}
           />
+          <Route path="/admin/users" element={<ManageUsersPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
           <Route path="*" element={<NotFound />} />

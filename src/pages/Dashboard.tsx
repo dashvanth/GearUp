@@ -9,6 +9,9 @@ import {
   Loader2,
   CheckCircle,
   XCircle,
+  Users,
+  Edit,
+  Trash2,
 } from "lucide-react";
 import {
   Card,
@@ -43,8 +46,19 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
-// --- Helper Component for Renter's View ---
+// --- Renter's View (No changes here) ---
 const RenterView = ({
   bookings,
   isLoading,
@@ -107,111 +121,319 @@ const RenterView = ({
   </Card>
 );
 
-// --- Helper Component for Owner's View ---
-const OwnerView = () => {
-  const navigate = useNavigate();
-  return (
-    <Card className="bg-surface/30 border-border">
-      <CardHeader>
-        <CardTitle>Quick Actions</CardTitle>
-        <CardDescription>Common tasks for your owner account.</CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-wrap gap-4">
-        <Button variant="hero" onClick={() => navigate("/equipment/new")}>
-          Add New Equipment
-        </Button>
-        <Button variant="outline" onClick={() => navigate("/owner/listings")}>
-          Manage Listings
-        </Button>
-      </CardContent>
-    </Card>
-  );
-};
-
-// --- Helper Component for Admin's View ---
-const AdminView = ({
-  pendingEquipment,
-  onUpdate,
+// --- UPDATED Owner's View ---
+const OwnerView = ({
+  listings,
+  setListings,
   isLoading,
 }: {
-  pendingEquipment: EquipmentItem[];
-  onUpdate: () => void;
+  listings: EquipmentItem[];
+  setListings: React.Dispatch<React.SetStateAction<EquipmentItem[]>>;
   isLoading: boolean;
 }) => {
-  const handleApproval = async (
-    id: string,
-    newStatus: "approved" | "rejected"
-  ) => {
+  const navigate = useNavigate();
+
+  const handleDelete = async (id: string) => {
     try {
-      if (newStatus === "approved") {
-        const docRef = doc(db, "equipment", id);
-        await updateDoc(docRef, { status: "approved" });
-        toast.success("Equipment approved and is now live.");
-      } else {
-        await deleteDoc(doc(db, "equipment", id));
-        toast.success("Equipment rejected and has been removed.");
-      }
-      onUpdate(); // Refresh the list
+      await deleteDoc(doc(db, "equipment", id));
+      setListings((prev) => prev.filter((item) => item.id !== id));
+      toast.success("Listing deleted successfully.");
     } catch (error) {
-      toast.error("An error occurred while updating the status.");
+      toast.error("Failed to delete listing.");
     }
   };
 
   return (
     <Card className="bg-surface/30 border-border">
       <CardHeader>
-        <CardTitle>Pending Equipment Approvals</CardTitle>
-        <CardDescription>
-          Review and approve new equipment listings from owners.
-        </CardDescription>
+        <div className="flex justify-between items-center">
+          <div>
+            <CardTitle>My Equipment Listings</CardTitle>
+            <CardDescription>Manage your equipment for rent.</CardDescription>
+          </div>
+          <Button variant="hero" onClick={() => navigate("/equipment/new")}>
+            Add New Equipment
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="flex justify-center py-4">
+          <div className="flex justify-center py-8">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
-        ) : pendingEquipment.length > 0 ? (
+        ) : listings.length > 0 ? (
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
-                <TableHead>Price</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Price/Day</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {pendingEquipment.map((item) => (
+              {listings.map((item) => (
                 <TableRow key={item.id}>
-                  <TableCell>{item.name}</TableCell>
+                  <TableCell className="font-medium">{item.name}</TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={
+                        item.availability === "Available"
+                          ? "default"
+                          : "secondary"
+                      }
+                    >
+                      {item.availability}
+                    </Badge>
+                  </TableCell>
                   <TableCell>₹{item.price.toLocaleString("en-IN")}</TableCell>
                   <TableCell className="text-right space-x-2">
                     <Button
-                      size="icon"
                       variant="outline"
-                      className="text-green-500"
-                      onClick={() => handleApproval(item.id, "approved")}
-                    >
-                      <CheckCircle className="h-4 w-4" />
-                    </Button>
-                    <Button
                       size="icon"
-                      variant="destructive"
-                      onClick={() => handleApproval(item.id, "rejected")}
+                      onClick={() =>
+                        navigate(`/owner/listings/edit/${item.id}`)
+                      }
                     >
-                      <XCircle className="h-4 w-4" />
+                      <Edit className="h-4 w-4" />
                     </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="icon">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>
+                            Are you absolutely sure?
+                          </AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will permanently delete your "{item.name}"
+                            listing.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDelete(item.id)}
+                          >
+                            Continue
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         ) : (
-          <p className="text-center text-text-muted py-4">
-            No equipment pending approval.
-          </p>
+          <div className="text-center py-8">
+            <p className="text-text-muted mb-4">
+              You haven't listed any equipment yet.
+            </p>
+            <Button variant="hero" onClick={() => navigate("/equipment/new")}>
+              List Your First Item
+            </Button>
+          </div>
         )}
       </CardContent>
     </Card>
+  );
+};
+
+// --- UPDATED Admin's View ---
+const AdminView = ({
+  allEquipment,
+  setAllEquipment,
+  onUpdate,
+  isLoading,
+}: {
+  allEquipment: EquipmentItem[];
+  setAllEquipment: React.Dispatch<React.SetStateAction<EquipmentItem[]>>;
+  onUpdate: () => void;
+  isLoading: boolean;
+}) => {
+  const navigate = useNavigate();
+
+  const handleApproval = async (
+    id: string,
+    newStatus: "approved" | "rejected"
+  ) => {
+    try {
+      if (newStatus === "approved") {
+        await updateDoc(doc(db, "equipment", id), { status: "approved" });
+        toast.success("Equipment approved and is now live.");
+      } else {
+        await deleteDoc(doc(db, "equipment", id));
+        toast.success("Equipment rejected and has been removed.");
+      }
+      onUpdate();
+    } catch (error) {
+      toast.error("An error occurred while updating the status.");
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, "equipment", id));
+      setAllEquipment((prev) => prev.filter((item) => item.id !== id));
+      toast.success("Listing deleted successfully.");
+    } catch (error) {
+      toast.error("Failed to delete listing.");
+    }
+  };
+
+  const pendingEquipment = allEquipment.filter(
+    (item) => item.status === "pending"
+  );
+  const approvedEquipment = allEquipment.filter(
+    (item) => item.status === "approved"
+  );
+
+  return (
+    <div className="space-y-8">
+      <Card className="bg-surface/30 border-border">
+        <CardHeader>
+          <CardTitle>Pending Equipment Approvals</CardTitle>
+          <CardDescription>
+            Review and approve new equipment listings from owners.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex justify-center py-4">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : pendingEquipment.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Price</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pendingEquipment.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell>{item.name}</TableCell>
+                    <TableCell>₹{item.price.toLocaleString("en-IN")}</TableCell>
+                    <TableCell className="text-right space-x-2">
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="text-green-500"
+                        onClick={() => handleApproval(item.id, "approved")}
+                      >
+                        <CheckCircle className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="destructive"
+                        onClick={() => handleApproval(item.id, "rejected")}
+                      >
+                        <XCircle className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <p className="text-center text-text-muted py-4">
+              No equipment pending approval.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="bg-surface/30 border-border">
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle>All Equipment Listings</CardTitle>
+              <CardDescription>
+                Edit or delete any listing on the platform.
+              </CardDescription>
+            </div>
+            <Button variant="outline" onClick={() => navigate("/admin/users")}>
+              <Users className="mr-2 h-4 w-4" />
+              Manage Users
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : approvedEquipment.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Owner ID</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {approvedEquipment.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell className="font-medium">{item.name}</TableCell>
+                    <TableCell className="text-xs text-text-muted">
+                      {item.ownerId}
+                    </TableCell>
+                    <TableCell className="text-right space-x-2">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() =>
+                          navigate(`/owner/listings/edit/${item.id}`)
+                        }
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="destructive" size="icon">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>
+                              Are you absolutely sure?
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will permanently delete the "{item.name}"
+                              listing. This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDelete(item.id)}
+                            >
+                              Continue
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-text-muted">No approved equipment found.</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 
@@ -223,12 +445,14 @@ const Dashboard = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [allUsers, setAllUsers] = useState<PlatformUser[]>([]);
   const [allEquipment, setAllEquipment] = useState<EquipmentItem[]>([]);
+  const [ownerListings, setOwnerListings] = useState<EquipmentItem[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
 
   const fetchData = async () => {
     if (!user) return;
     setDataLoading(true);
     try {
+      // Fetch data common to all or specific roles
       if (user.role === "renter") {
         const q = query(
           collection(db, "bookings"),
@@ -238,6 +462,17 @@ const Dashboard = () => {
         setBookings(
           snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Booking))
         );
+      } else if (user.role === "owner") {
+        const q = query(
+          collection(db, "equipment"),
+          where("ownerId", "==", user.id)
+        );
+        const snapshot = await getDocs(q);
+        setOwnerListings(
+          snapshot.docs.map(
+            (doc) => ({ id: doc.id, ...doc.data() } as EquipmentItem)
+          )
+        );
       } else if (user.role === "admin") {
         const usersSnapshot = await getDocs(collection(db, "users"));
         setAllUsers(
@@ -245,7 +480,6 @@ const Dashboard = () => {
             (doc) => ({ id: doc.id, ...doc.data() } as PlatformUser)
           )
         );
-
         const equipmentSnapshot = await getDocs(collection(db, "equipment"));
         setAllEquipment(
           equipmentSnapshot.docs.map(
@@ -262,8 +496,10 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
-    fetchData();
-  }, [user]);
+    if (!userLoading && user) {
+      fetchData();
+    }
+  }, [user, userLoading]);
 
   if (userLoading) {
     return (
@@ -328,7 +564,7 @@ const Dashboard = () => {
         return [
           {
             title: "My Equipment",
-            value: "0",
+            value: ownerListings.length.toString(),
             icon: Package,
             description: "Your active listings",
           },
@@ -458,10 +694,17 @@ const Dashboard = () => {
             {user.role === "renter" && (
               <RenterView bookings={bookings} isLoading={dataLoading} />
             )}
-            {user.role === "owner" && <OwnerView />}
+            {user.role === "owner" && (
+              <OwnerView
+                listings={ownerListings}
+                setListings={setOwnerListings}
+                isLoading={dataLoading}
+              />
+            )}
             {user.role === "admin" && (
               <AdminView
-                pendingEquipment={pendingEquipment}
+                allEquipment={allEquipment}
+                setAllEquipment={setAllEquipment}
                 onUpdate={fetchData}
                 isLoading={dataLoading}
               />
